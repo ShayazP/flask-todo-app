@@ -97,6 +97,7 @@
             display: flex;
             gap: 10px;
             margin-top: 10px;
+            margin-bottom: 15px;
         }
         
         label {
@@ -116,6 +117,20 @@
         }
         
         input[type="text"]:focus {
+            outline: none;
+            border-color: #4A6CF7;
+        }
+        
+        input[type="datetime-local"] {
+            padding: 12px 15px;
+            border: 1px solid #ddd;
+            border-radius: 6px;
+            font-size: 16px;
+            transition: border-color 0.3s;
+            width: 100%;
+        }
+        
+        input[type="datetime-local"]:focus {
             outline: none;
             border-color: #4A6CF7;
         }
@@ -159,7 +174,7 @@
         .todo-info {
             display: flex;
             align-items: center;
-            gap: 10px;
+            gap: 15px;
             flex: 1;
         }
         
@@ -180,6 +195,17 @@
             font-weight: 500;
         }
         
+        .todo-details {
+            display: flex;
+            flex-direction: column;
+            gap: 5px;
+        }
+        
+        .todo-due-date {
+            font-size: 14px;
+            color: #666;
+        }
+        
         .status-badge {
             border-radius: 15px;
             padding: 4px 12px;
@@ -196,6 +222,11 @@
         .status-complete {
             background-color: #F0FFF4;
             color: #34D399;
+        }
+        
+        .status-overdue {
+            background-color: #FEE2E2;
+            color: #DC2626;
         }
         
         .todo-actions {
@@ -281,6 +312,15 @@
                 width: 100%;
                 justify-content: flex-end;
             }
+            
+            .todo-info {
+                flex-direction: column;
+                align-items: flex-start;
+            }
+            
+            .task-input-group {
+                width: 100%;
+            }
         }
     </style>
 </head>
@@ -307,6 +347,12 @@
                         <label for="title">To Do Item</label>
                         <div class="task-input-group">
                             <input type="text" name="title" placeholder="Enter Task Title..." required>
+                        </div>
+                        <div class="task-input-group">
+                            <label for="due_date">Due Date</label>
+                            <input type="datetime-local" name="due_date" id="due_date" required>
+                        </div>
+                        <div class="task-input-group">
                             <button type="submit">Add Task</button>
                         </div>
                     </div>
@@ -318,11 +364,18 @@
                     <div class="todo-item">
                         <div class="todo-info">
                             <span class="todo-id">{{ todo.id }}</span>
-                            <span class="todo-title">{{ todo.title }}</span>
+                            <div class="todo-details">
+                                <span class="todo-title">{{ todo.title }}</span>
+                                <span class="todo-due-date">Due: {{ todo.due_date.strftime('%Y-%m-%d %H:%M') }}</span>
+                            </div>
                             {% if todo.complete == False %}
                                 <span class="status-badge status-incomplete">Not Complete</span>
                             {% else %}
                                 <span class="status-badge status-complete">Complete</span>
+                            {% endif %}
+                            
+                            {% if todo.due_date < now() and not todo.complete %}
+                                <span class="status-badge status-overdue">Overdue</span>
                             {% endif %}
                         </div>
                         

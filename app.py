@@ -2,6 +2,7 @@ from flask import Flask, render_template, request, redirect, url_for
 from flask_sqlalchemy import SQLAlchemy
 from flask_login import LoginManager, UserMixin, login_user, logout_user, login_required, current_user
 from werkzeug.security import generate_password_hash, check_password_hash
+from datetime import datetime  # Add this import at the top
 
 app = Flask(__name__)
 app.config['SQLALCHEMY_DATABASE_URI'] = 'sqlite:///db.sqlite'
@@ -19,6 +20,7 @@ class Todo(db.Model):
     title = db.Column(db.String(100))
     complete = db.Column(db.Boolean)
     user_id = db.Column(db.Integer, db.ForeignKey('user.id'), nullable=False)
+    due_date = db.Column(db.DateTime)  # Add this line
 
 class User(UserMixin, db.Model):
     id = db.Column(db.Integer, primary_key=True)
@@ -33,16 +35,21 @@ def root():
 @app.route("/todos")
 @login_required
 def index():
-    # Only get todos for the current user
-    todo_list = Todo.query.filter_by(user_id=current_user.id).all()
-    return render_template("base.html", todo_list=todo_list)
+    # Get todos for current user, sorted by due date
+    todo_list = Todo.query.filter_by(user_id=current_user.id).order_by(Todo.due_date.asc()).all()
+    return render_template("base.html", todo_list=todo_list, now=datetime.now)
 
 @app.route("/create", methods=["POST"])
 @login_required
 def create():
-    # add new item with current user's id
     title = request.form.get("title")
-    new_todo = Todo(title=title, complete=False, user_id=current_user.id)
+    due_date = datetime.strptime(request.form.get("due_date"), '%Y-%m-%dT%H:%M')
+    new_todo = Todo(
+        title=title,
+        complete=False,
+        user_id=current_user.id,
+        due_date=due_date
+    )
     db.session.add(new_todo)
     db.session.commit()
     return redirect(url_for("index"))
