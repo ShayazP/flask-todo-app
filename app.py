@@ -190,6 +190,6 @@ def sync_todo_to_calendar(todo):
 
 if __name__ == "__main__":
     with app.app_context():
-        # db.drop_all()  # Comment this out so we don't lose data on restart
+        db.drop_all()  # This ensures we start fresh
         db.create_all()
     app.run(debug=True)
