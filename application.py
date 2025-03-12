@@ -3,16 +3,20 @@ from flask_sqlalchemy import SQLAlchemy
 from flask_login import LoginManager, UserMixin, login_user, logout_user, login_required, current_user
 from werkzeug.security import generate_password_hash, check_password_hash
 from datetime import datetime  # Add this import at the top
+import os
 
-app = Flask(__name__)
-app.config['SQLALCHEMY_DATABASE_URI'] = 'sqlite:///db.sqlite'
-app.config['SQLALCHEMY_TRACK_MODIFICATIONS'] = False
-app.config['SECRET_KEY'] = 'temp'
-db = SQLAlchemy(app)
+application = Flask(__name__)
+os.makedirs(application.instance_path, exist_ok=True)
+   
+   # Configure SQLite database path
+application.config['SQLALCHEMY_DATABASE_URI'] = 'sqlite:///' + os.path.join(application.instance_path, 'db.sqlite')
+application.config['SQLALCHEMY_TRACK_MODIFICATIONS'] = False
+application.config['SECRET_KEY'] = 'temp'
+db = SQLAlchemy(application)
 
 # Login portion 
 login_manager = LoginManager()
-login_manager.init_app(app) 
+login_manager.init_app(application) 
 login_manager.login_view = 'login'
 
 class Todo(db.Model):
@@ -28,18 +32,18 @@ class User(UserMixin, db.Model):
     password = db.Column(db.String()) # will be hashed
     todos = db.relationship('Todo', backref='user', lazy=True)
 
-@app.route("/")
+@application.route("/")
 def root():
-    return render_template("lander.html")
+    return redirect("login")
     
-@app.route("/todos")
+@application.route("/todos")
 @login_required
 def index():
     # Get todos for current user, sorted by due date
     todo_list = Todo.query.filter_by(user_id=current_user.id).order_by(Todo.due_date.asc()).all()
     return render_template("base.html", todo_list=todo_list, now=datetime.now)
 
-@app.route("/create", methods=["POST"])
+@application.route("/create", methods=["POST"])
 @login_required
 def create():
     title = request.form.get("title")
@@ -54,7 +58,7 @@ def create():
     db.session.commit()
     return redirect(url_for("index"))
 
-@app.route("/delete/<int:todo_id>", methods=["GET"])
+@application.route("/delete/<int:todo_id>", methods=["GET"])
 @login_required
 def delete(todo_id):
     # Only delete if the todo belongs to current user
@@ -64,7 +68,7 @@ def delete(todo_id):
         db.session.commit()
     return redirect(url_for("index"))
 
-@app.route("/update/<int:todo_id>", methods=["GET"])
+@application.route("/update/<int:todo_id>", methods=["GET"])
 @login_required
 def update(todo_id):
     # Only update if the todo belongs to current user
@@ -78,7 +82,7 @@ def update(todo_id):
 def loader_user(user_id):
     return User.query.get(user_id)
 
-@app.route('/register', methods=["GET", "POST"])
+@application.route('/register', methods=["GET", "POST"])
 def register():
     if request.method == "POST":
         # Hash the password before storing
@@ -91,7 +95,7 @@ def register():
         return redirect(url_for("login"))
     return render_template("sign_up.html")
 
-@app.route("/login", methods=["GET", "POST"])
+@application.route("/login", methods=["GET", "POST"])
 def login():
     if request.method == "POST":
         user = User.query.filter_by(
@@ -103,14 +107,14 @@ def login():
             return redirect(url_for("index"))
     return render_template("login.html")
 
-@app.route("/logout")
+@application.route("/logout")
 @login_required
 def logout():
     logout_user()
     return redirect(url_for("login"))
 
-if __name__ == "__main__":
-    with app.app_context():
-        db.drop_all()  # This ensures we start fresh
-        db.create_all()
-    app.run(debug=True)
+with application.app_context():
+    db.create_all()
+
+if __name__ == '__main__':
+    application.run(host='0.0.0.0', port=8000)
