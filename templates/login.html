@@ -17,14 +17,16 @@
 			background-color: #f5f7fa;
 			min-height: 100vh;
 			padding: 20px;
+			color: #333;
 		}
 		
 		nav {
-			background-color: white;
+			background-color: #517080;
 			padding: 15px 20px;
 			box-shadow: 0 2px 10px rgba(0, 0, 0, 0.1);
 			border-radius: 8px;
 			margin-bottom: 30px;
+			color: white;
 		}
 		
 		nav ul {
@@ -35,17 +37,17 @@
 		
 		nav a {
 			text-decoration: none;
-			color: #4A6CF7;
+			color: white;
 			font-weight: 500;
 			transition: color 0.3s;
 		}
 		
 		nav a:hover {
-			color: #3a5fef;
+			color: #3d5560;
 		}
 		
 		h1 {
-			color: #333;
+			color: #517080;
 			margin-bottom: 25px;
 			text-align: center;
 		}
@@ -80,11 +82,11 @@
 		
 		input:focus {
 			outline: none;
-			border-color: #4A6CF7;
+			border-color: #517080;
 		}
 		
 		button {
-			background-color: #4A6CF7;
+			background-color: #517080;
 			color: white;
 			border: none;
 			border-radius: 6px;
@@ -97,13 +99,23 @@
 		}
 		
 		button:hover {
-			background-color: #3a5fef;
+			background-color: #3d5560;
 		}
 		
 		@media (max-width: 600px) {
 			form {
 				padding: 20px;
 			}
+		}
+		
+		/* Make navigation links blue */
+		nav {
+			color: #517080;
+		}
+
+		/* For the header navigation, keep links white for better contrast */
+		header nav ul li a {
+			color: white;
 		}
 	</style>
 </head>

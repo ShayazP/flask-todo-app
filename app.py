@@ -30,7 +30,7 @@ class User(UserMixin, db.Model):
 
 @app.route("/")
 def root():
-    return redirect("login")
+    return render_template("lander.html")
     
 @app.route("/todos")
 @login_required
