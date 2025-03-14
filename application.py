@@ -1,8 +1,18 @@
-from flask import Flask, render_template, request, redirect, url_for
+from flask import Flask, render_template, request, redirect, url_for, session
 from flask_sqlalchemy import SQLAlchemy
 from flask_login import LoginManager, UserMixin, login_user, logout_user, login_required, current_user
 from werkzeug.security import generate_password_hash, check_password_hash
 from datetime import datetime  # Add this import at the top
+import json
+from google.oauth2.credentials import Credentials
+from google_auth_oauthlib.flow import Flow
+from googleapiclient.discovery import build
+import os
+
+# Google Calendar API Settings
+SCOPES = ['https://www.googleapis.com/auth/calendar']
+CLIENT_SECRETS_FILE = "client_secrets.json"
+os.environ['OAUTHLIB_INSECURE_TRANSPORT'] = '1'  # Only for development
 import os
 
 application = Flask(__name__)
@@ -31,6 +41,7 @@ class User(UserMixin, db.Model):
     name = db.Column(db.String(100))
     password = db.Column(db.String()) # will be hashed
     todos = db.relationship('Todo', backref='user', lazy=True)
+    google_token = db.Column(db.Text)  # To store Google OAuth token
 
 @application.route("/")
 def root():
@@ -56,6 +67,10 @@ def create():
     )
     db.session.add(new_todo)
     db.session.commit()
+    
+    if current_user.google_token:  # Only sync if user has connected Google Calendar
+        sync_todo_to_calendar(new_todo)
+    
     return redirect(url_for("index"))
 
 @application.route("/delete/<int:todo_id>", methods=["GET"])
@@ -113,6 +128,77 @@ def logout():
     logout_user()
     return redirect(url_for("login"))
 
+def get_google_calendar_service():
+    if not current_user.google_token:
+        return None
+    credentials = Credentials.from_authorized_user_info(json.loads(current_user.google_token), SCOPES)
+    return build('calendar', 'v3', credentials=credentials)
+
+@application.route('/authorize')
+@login_required
+def authorize():
+    flow = Flow.from_client_secrets_file(
+        CLIENT_SECRETS_FILE, 
+        scopes=SCOPES,
+        redirect_uri=url_for('oauth2callback', _external=True),
+    )
+    authorization_url, state = flow.authorization_url(
+        access_type='offline',
+        include_granted_scopes='true',
+        prompt='consent'
+    )
+    session['state'] = state
+    return redirect(authorization_url)
+
+@application.route('/oauth2callback')
+@login_required
+def oauth2callback():
+    state = session['state']
+    flow = Flow.from_client_secrets_file(
+        CLIENT_SECRETS_FILE, 
+        scopes=SCOPES,
+        state=state,
+        redirect_uri=url_for('oauth2callback', _external=True)
+    )
+    authorization_response = request.url
+    flow.fetch_token(authorization_response=authorization_response)
+    credentials = flow.credentials
+    current_user.google_token = json.dumps({
+        'token': credentials.token,
+        'refresh_token': credentials.refresh_token,
+        'token_uri': credentials.token_uri,
+        'client_id': credentials.client_id,
+        'client_secret': credentials.client_secret,
+        'scopes': credentials.scopes
+    })
+    db.session.commit()
+    return redirect(url_for('index'))
+
+
+def sync_todo_to_calendar(todo):
+    service = get_google_calendar_service()
+    if not service:
+        return
+    
+    event = {
+        'summary': todo.title,
+        'start': {
+            'dateTime': todo.due_date.isoformat(),
+            'timeZone': 'America/Los_Angeles',
+        },
+        'end': {
+            'dateTime': todo.due_date.isoformat(),
+            'timeZone': 'America/Los_Angeles',
+        }
+    }
+    
+    service.events().insert(calendarId='primary', body=event).execute()
+
+if __name__ == "__main__":
+    with application.app_context():
+        db.drop_all()  # This ensures we start fresh
+        db.create_all()
+    application.run(debug=True)
 with application.app_context():
     db.create_all()
 
