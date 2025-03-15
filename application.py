@@ -2,19 +2,19 @@ from flask import Flask, render_template, request, redirect, url_for
 from flask_sqlalchemy import SQLAlchemy
 from flask_login import LoginManager, UserMixin, login_user, logout_user, login_required, current_user
 from werkzeug.security import generate_password_hash, check_password_hash
-from datetime import datetime  # Add this import at the top
+from datetime import datetime
 import os
 
 application = Flask(__name__)
 os.makedirs(application.instance_path, exist_ok=True)
    
-   # Configure SQLite database path
+# Database Configuration
 application.config['SQLALCHEMY_DATABASE_URI'] = 'sqlite:///' + os.path.join(application.instance_path, 'db.sqlite')
 application.config['SQLALCHEMY_TRACK_MODIFICATIONS'] = False
 application.config['SECRET_KEY'] = 'temp'
 db = SQLAlchemy(application)
 
-# Login portion 
+# Flask-login configuration
 login_manager = LoginManager()
 login_manager.init_app(application) 
 login_manager.login_view = 'login'
@@ -24,12 +24,12 @@ class Todo(db.Model):
     title = db.Column(db.String(100))
     complete = db.Column(db.Boolean)
     user_id = db.Column(db.Integer, db.ForeignKey('user.id'), nullable=False)
-    due_date = db.Column(db.DateTime)  # Add this line
+    due_date = db.Column(db.DateTime)
 
 class User(UserMixin, db.Model):
     id = db.Column(db.Integer, primary_key=True)
     name = db.Column(db.String(100))
-    password = db.Column(db.String()) # will be hashed
+    password = db.Column(db.String())
     todos = db.relationship('Todo', backref='user', lazy=True)
 
 @application.route("/")
@@ -46,14 +46,10 @@ def index():
 @application.route("/create", methods=["POST"])
 @login_required
 def create():
+    # Creates a new todo with title and due date
     title = request.form.get("title")
     due_date = datetime.strptime(request.form.get("due_date"), '%Y-%m-%dT%H:%M')
-    new_todo = Todo(
-        title=title,
-        complete=False,
-        user_id=current_user.id,
-        due_date=due_date
-    )
+    new_todo = Todo(title=title, complete=False, user_id=current_user.id, due_date=due_date)
     db.session.add(new_todo)
     db.session.commit()
     return redirect(url_for("index"))
@@ -85,11 +81,9 @@ def loader_user(user_id):
 @application.route('/register', methods=["GET", "POST"])
 def register():
     if request.method == "POST":
-        # Hash the password before storing
+        # Create a new user with hashed password
         hashed_password = generate_password_hash(request.form.get("password"))
-        user = User(
-            name=request.form.get("name"),
-            password=hashed_password)
+        user = User(name=request.form.get("name"), password=hashed_password)
         db.session.add(user)
         db.session.commit()
         return redirect(url_for("login"))
@@ -98,10 +92,11 @@ def register():
 @application.route("/login", methods=["GET", "POST"])
 def login():
     if request.method == "POST":
-        user = User.query.filter_by(
-            name=request.form.get("name")).first()
+        user = User.query.filter_by(name=request.form.get("name")).first()
+        # If user doesn't exist redirect them to login
         if user is None:
             return redirect(url_for("login"))
+        # If user exists and the passsword matches log the user in
         if check_password_hash(user.password, request.form.get("password")):
             login_user(user)
             return redirect(url_for("index"))
