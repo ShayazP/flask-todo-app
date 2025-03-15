@@ -48,7 +48,7 @@ pip install python-dotenv
 pip install flask-login
 ```
 
-5. Go to the flask-todo-app folder
+5. Go to the flask-todo-app folder (if already in it then ignore this and go to step 6)
 ```bash
 cd flask-todo-app
 ```
