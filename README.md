@@ -63,7 +63,13 @@ Running on http://127.0.0.1:8000
 ```
 8. Once you open this link in the browser, you then can use the application locally.
 
+
+
 9. To use the live version you can visit
 ```bash
 http://cloud-todo.us-west-2.elasticbeanstalk.com/
 ```
+
+## High Level Design
+
+![HLD](https://github.com/ShayazP/flask-todo-app/blob/57f74f72c86729c32b0e4e80a5e69438b8cb2c35/Cloud%20To-Do%20Architecture%20Design%20Diagram.png)
